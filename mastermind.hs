@@ -1,10 +1,14 @@
 import Data.Char
-
+import System.Time
+import Control.Exception
+import System.Random
 mastermind = do
                 let
                         letras = ['A','B','C','D','E','F']
                         poblacion = [[w,x,y,z]|w<-letras,x<-letras,y<-letras,z<-letras]
+					
                 print poblacion
+				--randomico 5
                 hr'
                 putStr (take 35 (cycle " "))
                 putStr ("MASTERMIND")
@@ -49,6 +53,9 @@ comprueba (a,b)
         | (a,b) <= (0,4) = "Bien!"
     | otherwise      = "Combinacion invalida. (u_u)"
     
-    
-  
-                        
+randomico :: Int -> Int
+randomico sec = head(take 1 . randomRs (0, 1296) . mkStdGen $ sec)       
+
+gettime :: IO ClockTime
+gettime = getClockTime
+      
