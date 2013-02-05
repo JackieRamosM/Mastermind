@@ -21,15 +21,7 @@ mastermind = do
 		putStr "\n\tNombre de jugador: "
 		nombre <- getLine		
 		putStrLn ("\tBienvenid@ " ++ nombre ++ "!\n\n")		
-		putStr "\n\tMi adivinanza es: "
-		putStrLn (head guess)
-		putStrLn "\n\n\t-[ Retroalimentacion ]-"
-		linea
-		putStr "\tCuantas letras estan en la posicion correcta? "
-		letrapos <- getLine
-		putStr "\tCuantas letras estan en la posicion incorrecta? "
-		difpos <- getLine
-		putStr(comprueba(read letrapos, read difpos))
+		intentos (head guess)
                 
 hr' = putStr (take 80 (cycle "*"))
 br' = putStrLn " "
@@ -73,7 +65,32 @@ guardarLetras = do
 		outh <- openFile "letras.txt" WriteMode
 		let letters = ["ABCDEF"]
 		hPutStr outh (head letters)
-		hClose outh					
+		hClose outh				
+
+intentos :: String -> IO ()
+intentos guess = do
+		putStr "\n\tMi adivinanza es: "
+		putStrLn guess
+		putStrLn "\n\n\t-[ Retroalimentacion ]-"
+		linea
+		putStr "\tCuantas letras estan en la posicion correcta? "
+		letrapos <- getLine
+		putStr "\tCuantas letras estan en la posicion incorrecta? "
+		difpos <- getLine
+		--putStr(comprueba(read letrapos, read difpos))
+		
+		if (comprueba(read letrapos, read difpos) == "Combinacion invalida. (u_u)")
+			then intentos guess
+			else putStrLn $ show (unsafeDupablePerformIO (arregloAleatorio(read letrapos)))
+		
+		
+arregloAleatorio letrapos = do
+		let
+			array = [1,2,3,4]
+			shuf = shuffle array
+			ob = take letrapos (unsafeDupablePerformIO shuf) 
+		return ob
+				
 		
 {--	
 savePopulation = do    
