@@ -7,13 +7,11 @@ import Data.Array.IO
 import Control.Monad
 import System.IO.Unsafe
 
-mastermind = do		
-		--let letras = ['A','B','C','D','E','F']
-		--let poblacion = [[w,x,y,z]|w<-letras,x<-letras,y<-letras,z<-letras]	
-		--let shuf = shuffle poblacion		
-		let archivo = readFile "poblacion.txt" --cargar archivo
-		let poblacion = return (archivo :: [[Char]]) --cargar archivo
-		let shuf = shuffle poblacion --cargar archivo
+mastermind = do				
+		guardarLetras
+		let letras = unsafeDupablePerformIO (readFile "letras.txt")		
+		let poblacion = [[w,x,y,z]|w<-letras,x<-letras,y<-letras,z<-letras]	
+		let shuf = shuffle poblacion						
 		let guess = take 1 (unsafeDupablePerformIO shuf)		
 		hr'
 		putStr (take 35 (cycle " "))
@@ -71,15 +69,20 @@ shuffle xs = do
     newArray :: Int -> [a] -> IO (IOArray Int a)
     newArray n xs =  newListArray (1,n) xs 
 	
-	
+guardarLetras = do    
+		outh <- openFile "letras.txt" WriteMode
+		let letters = ["ABCDEF"]
+		hPutStr outh (head letters)
+		hClose outh					
+		
+{--	
 savePopulation = do    
 		outh <- openFile "poblacion.txt" WriteMode
 		let letters = ['A','B','C','D','E','F']
 		let population = [[w,x,y,z]|w<-letters,x<-letters,y<-letters,z<-letters]
 		hPrint outh population
 		hClose outh
-	
-{--	
+		
 xNegras :: IO String
 xNegras = do
 	putStr "\n\t# de coincidencias en letra y posicion: "
