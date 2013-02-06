@@ -59,6 +59,21 @@ arregloAleatorio letrapos = do
 			shuf = shuffle array
 			ob = take letrapos (unsafeDupablePerformIO shuf) 
 		return ob													
+
+enviarAhistorialCasoUno = do			
+			let letras = unsafeDupablePerformIO (readFile "letras.txt")		
+			let poblacion = [[w,x,y,z]|w<-letras,x<-letras,y<-letras,z<-letras]	
+			let shuf = shuffle poblacion						
+			let guess' = take 1 (unsafeDupablePerformIO shuf)
+			return guess'
+			
+procesoCasoUno = do
+		handle <- openFile "historial.txt" ReadMode
+		contents <- hGetContents handle
+		hClose handle
+		if null contents
+			then return (unsafeDupablePerformIO enviarAhistorialCasoUno)
+			else return (unsafeDupablePerformIO enviarAhistorialCasoUno)
 			
 guardaHistorial :: String -> String -> String -> IO ()
 guardaHistorial guess correctas incorrectas = do
