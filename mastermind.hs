@@ -6,14 +6,19 @@ import Data.Char
 import Data.Array.IO
 import Control.Monad
 import System.IO.Unsafe
+import Data.Array.ST
+import Control.Monad.ST
+import Data.STRef
+import Data.List
 
 
 mastermind = do				
 		guardarLetras
 		let letras = unsafeDupablePerformIO (readFile "letras.txt")		
 		let poblacion = [[w,x,y,z]|w<-letras,x<-letras,y<-letras,z<-letras]	
-		let shuf = shuffle poblacion						
-		let guess = take 1 (unsafeDupablePerformIO shuf)	
+		num <- getStdGen
+		let shuf = randPerm num poblacion		
+		let guess = take 1 (shuf)	
 		hr'
 		putStr (take 35 (cycle " "))
 		putStr ("MASTERMIND")
@@ -22,10 +27,10 @@ mastermind = do
 		putStr "\n\tNombre de jugador: "
 		nombre <- getLine		
 		putStrLn ("\tBienvenid@ " ++ nombre ++ "!\n\n")		
-		intentos (head guess) 		                      		
+		intentos 1 (head guess) 		                      		
 
-intentos :: String -> IO ()
-intentos guess = do
+intentos :: Int -> String -> IO ()
+intentos numero guess = do
 		let historial=[]
 		putStr "\n\t ---> Mi adivinanza es: "
 		putStrLn guess
@@ -34,23 +39,37 @@ intentos guess = do
 		putStr "\tCuantas letras estan en la posicion correcta? "
 		letrapos <- getLine
 		putStr "\tCuantas letras estan en la posicion incorrecta? "
-		difpos <- getLine
-		guardaHistorial guess letrapos difpos
-		if(comprueba(read letrapos, read difpos) == "Caso x!")
-			then putStrLn "hacer el arregloAletorio y cambiar de pos en caso sea necesario"
+		difpos <- getLine		
+		if(numero == 15)
+			then putStrLn "\n\n\t\tLo siento, no pude conseguir el codigo... (u_u)\n\t\t\t --->TU GANAS!\n\n"
 			else
-				if(comprueba(read letrapos, read difpos) == "---")
-					then intentos guess
-					else 
-						if(comprueba(read letrapos, read difpos) == "Caso 2!")
-							then putStrLn "\n\n\t\t --- He descubierto tu codigo, TE GANE!! ---\n\n"
-							else
-								if(comprueba(read letrapos, read difpos) == "Caso 1!")
-									then intentos(head (unsafeDupablePerformIO (procesoCasoUno)))
+				if(comprueba(read letrapos, read difpos) == "Caso x!")
+					then do
+						putStrLn "hacer el arregloAletorio y cambiar de pos en caso sea necesario"
+						guardaHistorial guess letrapos difpos
+					else
+						if(comprueba(read letrapos, read difpos) == "---")
+							then do
+								guardaHistorial guess letrapos difpos
+								intentos (succ numero) guess
+							else 
+								if(comprueba(read letrapos, read difpos) == "Caso 2!")
+									then do
+										putStrLn "\n\n\t\t --- He descubierto tu codigo, TE GANE!! ---\n\n"
+										guardaHistorial guess letrapos difpos
 									else
-										if(comprueba(read letrapos, read difpos) == "Caso 3!")
-										then intentos(unsafeDupablePerformIO (shuffleGuess guess))
-										else putStrLn $ show (unsafeDupablePerformIO (arregloAleatorio(read letrapos)))
+										if(comprueba(read letrapos, read difpos) == "Caso 1!")
+											then do
+												guardaHistorial guess letrapos difpos
+												intentos (succ numero) ( head( unsafeDupablePerformIO( procesoCasoUno)))
+											else
+												if(comprueba(read letrapos, read difpos) == "Caso 3!")
+												then do
+													guardaHistorial guess letrapos difpos
+													intentos (succ numero) (unsafeDupablePerformIO (shuffleGuess guess))
+												else do
+													putStrLn $ show (unsafeDupablePerformIO (arregloAleatorio(read letrapos)))
+													guardaHistorial guess letrapos difpos
 				
 		
 arregloAleatorio letrapos = do
@@ -63,17 +82,17 @@ arregloAleatorio letrapos = do
 enviarAhistorialCasoUno = do			
 			let letras = unsafeDupablePerformIO (readFile "letras.txt")		
 			let poblacion = [[w,x,y,z]|w<-letras,x<-letras,y<-letras,z<-letras]	
-			let shuf = shuffle poblacion						
-			let guess' = take 1 (unsafeDupablePerformIO shuf)
+			newStdGen
+			n <- getStdGen
+			let shuf = randPerm n poblacion
+			let guess' = take 1 shuf
 			return guess'
 			
 procesoCasoUno = do
 		handle <- openFile "historial.txt" ReadMode
 		contents <- hGetContents handle
 		hClose handle
-		if null contents
-			then return (unsafeDupablePerformIO enviarAhistorialCasoUno)
-			else return (unsafeDupablePerformIO enviarAhistorialCasoUno)
+		return (unsafeDupablePerformIO enviarAhistorialCasoUno)			
 			
 guardaHistorial :: String -> String -> String -> IO ()
 guardaHistorial guess correctas incorrectas = do
@@ -124,9 +143,79 @@ shuffle xs = do
     n = length xs
     newArray :: Int -> [a] -> IO (IOArray Int a)
     newArray n xs =  newListArray (1,n) xs 
+		
+randPerm :: StdGen -> [a] -> [a]
+randPerm _ []   = []
+randPerm gen xs = let (n,newGen) = randomR (0,length xs -1) gen
+                      front = xs !! n
+                  in  front : randPerm newGen (take n xs ++ drop (n+1) xs)
 	
 guardarLetras = do    
 		outh <- openFile "letras.txt" WriteMode
 		let letters = ["ABCDEF"]
 		hPutStr outh (head letters)
-		hClose outh	
+		hClose outh
+		
+listaDeHistorial = do
+	handle <- openFile "historial.txt" ReadMode
+	contents <- hGetContents handle
+	hClose handle
+	return (unsafeDupablePerformIO (formarListaGeneral (lines contents) []))
+
+tamanioHistorial = length (unsafeDupablePerformIO(listaDeHistorial))
+	
+conseguirGuess string vacia = do
+						let lista = vacia ++ take 1 string
+						if length lista < 4 
+							then conseguirGuess (drop 1 string) lista																
+							else return lista
+
+conseguirLetrapos string vacia = do
+						let lista = vacia ++ take 1 string
+						if length lista < 6 
+							then conseguirLetrapos (drop 1 string) lista																
+							else return (last lista)
+							
+conseguirDifpos string vacia = do
+						let lista = vacia ++ take 1 string
+						if length lista < 8 
+							then conseguirDifpos (drop 1 string) lista																
+							else return (last lista)
+							
+formarListaGeneral listaStrings nuevaLista = do			
+			if null listaStrings
+				then return nuevaLista
+				else do
+					let
+						string = head listaStrings
+						guess = unsafeDupablePerformIO (conseguirGuess string [])
+						letrapos = unsafeDupablePerformIO (conseguirLetrapos string [])
+						difpos = unsafeDupablePerformIO (conseguirDifpos string [])						
+						tupla = (digitToInt letrapos, digitToInt difpos)
+						elemento = (guess,tupla)
+						nuevaNuevaLista = elemento : nuevaLista
+					print nuevaNuevaLista
+					formarListaGeneral (tail listaStrings) nuevaNuevaLista
+					
+mejorCaso (a,b)
+		| fst (a,b) == 0 && snd (a,b) == 0 = "0"
+		| fst (a,b) == 0 && snd (a,b) == 1 = "1"
+		| fst (a,b) == 1 && snd (a,b) == 0 = "1"
+		| fst (a,b) == 0 && snd (a,b) == 2 = "2"
+		| fst (a,b) == 1 && snd (a,b) == 1 = "2"
+		| fst (a,b) == 2 && snd (a,b) == 0 = "2"
+		| fst (a,b) == 0 && snd (a,b) == 3 = "3"
+		| fst (a,b) == 1 && snd (a,b) == 2 = "3"
+		| fst (a,b) == 2 && snd (a,b) == 1 = "3"
+		| fst (a,b) == 3 && snd (a,b) == 0 = "3"
+		| fst (a,b) == 0 && snd (a,b) == 4 = "4"
+		| fst (a,b) == 1 && snd (a,b) == 3 = "4"
+		| fst (a,b) == 2 && snd (a,b) == 2 = "4"
+		| fst (a,b) == 3 && snd (a,b) == 1 = "4"
+		| otherwise						   = "Some dfault"
+
+mejorGuess guess (letrapos, difpos) = do
+		let caso = mejorCaso (letrapos, difpos)
+		if caso == "4"
+			then return guess
+			else mejorGuess guess (letrapos, difpos)
