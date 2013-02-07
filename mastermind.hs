@@ -45,8 +45,14 @@ intentos numero guess = do
 			else
 				if(comprueba(read letrapos, read difpos) == "Caso x!")
 					then do
-						putStrLn "hacer el arregloAletorio y cambiar de pos en caso sea necesario"
 						guardaHistorial guess letrapos difpos
+						let array = arregloAleatorio (read letrapos)
+						if (length (array) == 1)
+							then do
+								let guess' = shuffleGuess guess 
+								let guess1 = guess' !! 0
+								intentos (succ numero) (head (guess1 : ["ABC"]))
+							else putStr "valimos"
 					else
 						if(comprueba(read letrapos, read difpos) == "---")
 							then do
